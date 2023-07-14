@@ -2,20 +2,20 @@
   <div>
     <h1>My Video Application</h1>
     <VideoUploader />
-    <SubtitleForm />
+    <!--SubtitleForm--> 
     <VideoPlayer :videoUrl="videoUrl" :subtitlesUrl="subtitlesUrl" />
   </div>
 </template>
 
 <script>
 import VideoUploader from './components/VideoUploader.vue';
-import SubtitleForm from './components/SubtitleForm.vue';
+//import SubtitleForm from './components/SubtitleForm.vue';
 import VideoPlayer from './components/VideoPlayer.vue';
 
 export default {
   components: {
     VideoUploader,
-    SubtitleForm,
+    //SubtitleForm,
     VideoPlayer
   },
   data() {

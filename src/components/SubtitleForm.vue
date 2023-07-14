@@ -14,7 +14,15 @@
   </template>
   
   <script>
+  import axios from 'axios';
   export default {
+    props: {
+      videoId: {
+        type: [String,null],
+        required: true
+      }
+    },
+
     data() {
       return {
         subtitles: [],
@@ -35,10 +43,12 @@
           return;
         }
         const subtitleData = {
-          subtitles: this.subtitles
+          videoId: this.videoId,
+          subtitles: this.subtitles          
         };
+        console.log(subtitleData.videoId);
         axios
-          .post('/api/subtitles', subtitleData)
+          .post('http://127.0.0.1:5000/api/subtitles', subtitleData)
           .then(() => {
             this.successMessage = 'Subtitles saved successfully!';
             this.subtitles = [];

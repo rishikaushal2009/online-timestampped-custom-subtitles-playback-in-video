@@ -1,9 +1,15 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, jsonify
+from flask_cors import CORS
 import os
-
+import uuid
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Enable CORS for all routes
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:8080"}})
+
+
 
 
 @app.route('/api/upload', methods=['POST'])
@@ -18,7 +24,13 @@ def upload_video():
     if video_file:
         video_filename = video_file.filename
         video_file.save(os.path.join(app.config['UPLOAD_FOLDER'], video_filename))
-        return 'Video uploaded successfully', 200
+        
+        # Generate a unique videoId
+        video_id = str(uuid.uuid4())
+        
+        # Return the videoId in the response
+        return {'message': 'Video uploaded successfully', 'videoId': video_id}, 200
+
 
 
 @app.route('/api/subtitles', methods=['POST'])
@@ -27,11 +39,11 @@ def create_subtitles():
     if not subtitle_data:
         return 'No subtitle data provided', 400
 
-    video_id = subtitle_data.get('video_id')
+    video_id = subtitle_data.get('videoId')
     if not video_id:
         return 'Video ID not specified', 400
 
-    subtitle_text = subtitle_data.get('subtitle_text')
+    subtitle_text = subtitle_data.get('subtitles')
     if not subtitle_text:
         return 'Subtitle text not provided', 400
 
@@ -51,6 +63,16 @@ def get_subtitles(video_id):
         return send_from_directory(app.config['UPLOAD_FOLDER'], subtitle_file_name, as_attachment=True)
 
     return 'Subtitles not found', 404
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    return jsonify(error=str(error)), 400
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify(error=str(error)), 404
 
 
 if __name__ == '__main__':
