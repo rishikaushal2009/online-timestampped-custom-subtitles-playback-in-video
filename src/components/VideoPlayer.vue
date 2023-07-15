@@ -90,10 +90,14 @@ export default {
     .get('http://127.0.0.1:5000/api/uploads/' + abc, {
           headers: {
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          responseType: 'blob'
     })
     .then(response => {
-      this.videoSource = response.data.videoSource; // Update videoSource with the received URL from the server
+      const videoBlob = new Blob([response.data], { type: 'video/mp4' });
+      this.videoSource = URL.createObjectURL(videoBlob); // Create a blob URL for the video source
+
+      //this.videoSource = response.data.videoSource; // Update videoSource with the received URL from the server
       //console.log(this.videoSource);
     })
     .catch(error => {

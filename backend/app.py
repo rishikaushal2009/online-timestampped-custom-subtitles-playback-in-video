@@ -1,4 +1,5 @@
 from flask import Flask, request, send_from_directory, jsonify
+from flask import send_file
 from flask_cors import CORS
 import os
 import uuid
@@ -92,14 +93,15 @@ def serve_video(filename):
     #video_filename = video_path.split('/')[-1]  # Extract the filename from the video path
     #logging.debug(filename)
     # Construct the full path to the video file based on the filename
-   # full_video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    full_video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    # Check if the video file exists
-    #if not os.path.isfile(full_video_path):
-     #   return 'Video not found', 404
+    #Check if the video file exists
+    if not os.path.isfile(full_video_path):
+        return 'Video not found', 404
 
     # Serve the video file using send_from_directory
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    #return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return send_file(full_video_path,mimetype='video/mp4')
 
 
                                
