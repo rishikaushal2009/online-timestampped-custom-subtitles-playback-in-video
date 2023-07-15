@@ -1,1 +1,0 @@
-[{'text': 'Hi How are you ?', 'timestamp': '00:00:03'}, {'text': 'I am good', 'timestamp': '00:00:05'}, {'text': '', 'timestamp': ''}]

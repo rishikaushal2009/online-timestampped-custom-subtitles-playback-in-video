@@ -5,28 +5,30 @@
     <button @click="uploadVideo" :disabled="!selectedFile">Upload</button>
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     <p v-else-if="successMessage" class="success">{{ successMessage }}</p>
-    <!--VideoPlayer-->
-    <SubtitleForm :videoId="videoId" />
-    
+    <SubtitleForm v-if="videoId" :videoId="videoId" />
+    <VideoPlayer v-if="videoId" :videoId="videoId" :videoUrl="videoUrl" :subtitlesUrl="subtitlesUrl" />
   </div>
 </template>
 
 <script>
 import axios from 'axios';
 import SubtitleForm from './SubtitleForm.vue';
-//import VideoPlayer from './VideoPlayer.vue';
+import VideoPlayer from './VideoPlayer.vue';
+
 export default {
   data() {
     return {
       selectedFile: null,
       errorMessage: '',
       successMessage: '',
-      videoId: null // Initialize videoId as null
+      videoId: null,
+      videoUrl: '/api/video',
+      subtitlesUrl: '/api/subtitles'
     };
   },
   components: {
-    SubtitleForm, // Register SubtitleForm component
-    //VideoPlayer
+    SubtitleForm,
+    VideoPlayer
   },
   methods: {
     handleFileUpload(event) {
@@ -46,11 +48,11 @@ export default {
           }
         })
         .then(response => {
-          console.log(response.data.videoId)
           this.successMessage = 'Video uploaded successfully!';
+          this.videoId = response.data.videoId;
+          this.videoUrl = `${this.selectedFile.name}`;
+          this.subtitlesUrl = `/api/subtitles/${this.videoId}`;
           this.selectedFile = null;
-          this.videoId = response.data.videoId; // Assign the videoId received from the response
-          
         })
         .catch(error => {
           this.errorMessage = 'Error uploading video: ' + error.message;
@@ -69,8 +71,3 @@ export default {
   color: green;
 }
 </style>
-
-  
-
-  
-  
