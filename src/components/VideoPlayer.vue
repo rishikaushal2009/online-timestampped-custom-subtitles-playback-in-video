@@ -1,19 +1,17 @@
 <template>
   <div>
     <h2>Video Player</h2>
-    <!--video ref="videoPlayer" :src="videoSource" @timeupdate="updateSubtitle" controls></video-->
-    <video ref="videoPlayer" :src="videoSource"  autoplay="autoplay" controls="controls"></video>
-    <!--
+    <video ref="videoPlayer" :src="videoSource" autoplay controls @play="handleVideoPlay"></video>
     <div v-if="displayedSubtitles.length > 0">
       <p v-for="(subtitle, index) in displayedSubtitles" :key="index">
         {{ subtitle.text }}
       </p>
     </div>
-  -->
   </div>
 </template>
 
 <script>
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
 
 export default {
@@ -31,87 +29,87 @@ export default {
       required: true
     }
   },
-  data() {
-    return {
-      //subtitles: [],
-      //currentTime: 0,
-      videoSource: ''
-    };
-  },
-/*
-  computed: {
-    displayedSubtitles() {
-      return this.subtitles.filter(subtitle => this.isSubtitleVisible(subtitle));
-    }
-  },
-  */
-  mounted() {
-    //this.loadSubtitles();
-    this.fetchVideoSource();
-    //this.videoUrl
-  },
+  setup(props) {
+    const videoPlayer = ref(null); // Create a ref to the video element
 
-  methods: {
-   /* 
-    loadSubtitles() {
+    const videoSource = ref('');
+    const subtitles = ref([]);
+    const subtitlesLoaded = ref(false);
+
+    const fetchVideoSource = () => {
+      const videoUrl = decodeURIComponent(props.videoUrl);
       axios
-        .get(this.subtitlesUrl)
+        .get('http://127.0.0.1:5000/api/uploads/'+ videoUrl, {
+          responseType: 'blob'
+        })
         .then(response => {
-          this.subtitles = response.data.subtitles;
+          const videoBlob = new Blob([response.data], { type: 'video/mp4' });
+          videoSource.value = URL.createObjectURL(videoBlob);
         })
         .catch(error => {
-          console.error('Error loading subtitles:', error);
+          console.error('Error fetching video source:', error);
+          videoSource.value = ''; // Set video source to an empty string or a default value
         });
-    },
-    updateSubtitle(event) {
-      this.currentTime = event.target.currentTime;
-    },
-    isSubtitleVisible(subtitle) {
-      const startTime = this.parseTimestamp(subtitle.timestamp);
-      const endTime = startTime + 2; // Display subtitle for 2 seconds
-      return this.currentTime >= startTime && this.currentTime <= endTime;
-    },
-    parseTimestamp(timestamp) {
-      // Split the timestamp into hours, minutes, and seconds
+    };
+
+    const fetchSubtitles = () => {
+      const subtitlesUrl = `${props.videoId}_subtitles.txt`;
+      axios
+        .get(`http://127.0.0.1:5000/api/subtitles/${subtitlesUrl}`)
+        .then(response => {
+          subtitles.value = response.data.subtitles;
+          subtitlesLoaded.value = true;
+        })
+        .catch(error => {
+          console.warn('Subtitles file not found:', error);
+          subtitles.value = []; // Set subtitles to an empty array if file not found
+          subtitlesLoaded.value = false;
+        });
+    };
+
+    const isSubtitleVisible = (subtitle, currentTime) => {
+      const startTime = parseTimestamp(subtitle.startTime);
+      const endTime = parseTimestamp(subtitle.endTime);
+
+      return currentTime >= startTime && currentTime <= endTime;
+    };
+
+    const parseTimestamp = timestamp => {
       const [hours, minutes, seconds] = timestamp.split(':');
+      return (parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds)) * 1000;
+    };
 
-      // Calculate the total milliseconds from hours, minutes, and seconds
-      const milliseconds = ((Number(hours) * 60 + Number(minutes)) * 60 + Number(seconds)) * 1000;
-
-      return milliseconds;
-    },
-    */
-    fetchVideoSource() {
-  // Make an AJAX request to your Flask server to get the video source URL
-  // Replace '/video/filename.mp4' with the appropriate URL to your Flask route
-  console.log(decodeURIComponent(this.videoUrl));
-  const abc = decodeURIComponent(this.videoUrl);
-  axios
-    .get('http://127.0.0.1:5000/api/uploads/' + abc, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          responseType: 'blob'
-    })
-    .then(response => {
-      const videoBlob = new Blob([response.data], { type: 'video/mp4' });
-      this.videoSource = URL.createObjectURL(videoBlob); // Create a blob URL for the video source
-
-      //this.videoSource = response.data.videoSource; // Update videoSource with the received URL from the server
-      //console.log(this.videoSource);
-    })
-    .catch(error => {
-      console.error('Error fetching video source:', error);
+    const displayedSubtitles = computed(() => {
+      const currentTime = videoPlayer.value ? videoPlayer.value.currentTime * 1000 : 0;
+      return subtitles.value.filter(subtitle => isSubtitleVisible(subtitle, currentTime));
     });
-}
 
-   
+    onMounted(() => {
+      fetchVideoSource();
+    });
+
+    /* eslint-disable no-unused-vars */
+    const handleVideoPlay = () => {
+      // Only fetch subtitles if the subtitles are not yet loaded
+      if (!subtitlesLoaded.value) {
+        fetchSubtitles();
+      }
+    };
+    /* eslint-disable no-unused-vars */
+
+    onUnmounted(() => {
+      // Clean up any event listeners or subscriptions here
+    });
+
+    return {
+      videoPlayer,
+      videoSource,
+      displayedSubtitles
+    };
   }
-
 };
 </script>
 
 <style scoped>
 /* Your component styles here */
 </style>
-

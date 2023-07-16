@@ -22,8 +22,8 @@ export default {
       errorMessage: '',
       successMessage: '',
       videoId: null,
-      videoUrl: '/api/video',
-      subtitlesUrl: '/api/subtitles'
+      videoName: '',
+      subtitlesUrl: ''
     };
   },
   components: {
@@ -33,6 +33,7 @@ export default {
   methods: {
     handleFileUpload(event) {
       this.selectedFile = event.target.files[0];
+      this.videoName = this.selectedFile.name;
     },
     uploadVideo() {
       if (!this.selectedFile) {
@@ -50,13 +51,17 @@ export default {
         .then(response => {
           this.successMessage = 'Video uploaded successfully!';
           this.videoId = response.data.videoId;
-          this.videoUrl = `${this.selectedFile.name}`;
-          this.subtitlesUrl = `/api/subtitles/${this.videoId}`;
+          this.subtitlesUrl = `/api/subtitles/${this.videoId}_subtitles.txt`;
           this.selectedFile = null;
         })
         .catch(error => {
           this.errorMessage = 'Error uploading video: ' + error.message;
         });
+    }
+  },
+  computed: {
+    videoUrl() {
+      return this.videoName ? `${this.videoName}` : '';
     }
   }
 };

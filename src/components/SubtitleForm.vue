@@ -1,73 +1,86 @@
 <template>
-    <div>
-      <h2>Add Subtitles</h2>
-      <div v-for="(subtitle, index) in subtitles" :key="index">
-        <input type="text" v-model="subtitle.text" placeholder="Subtitle text" />
-        <input type="text" v-model="subtitle.timestamp" placeholder="Timestamp (e.g., 00:00:10)" />
-        <button @click="removeSubtitle(index)">Remove</button>
-      </div>
-      <button @click="addSubtitle">Add Subtitle</button>
-      <button @click="saveSubtitles" :disabled="subtitles.length === 0">Save Subtitles</button>
-      <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-      <p v-else-if="successMessage" class="success">{{ successMessage }}</p>
+  <div>
+    <h2>Add Subtitles</h2>
+    <div v-for="(subtitle, index) in subtitles" :key="index">
+      <input type="text" v-model="subtitle.text" placeholder="Subtitle text" />
+      <input type="text" v-model="subtitle.timestamp" placeholder="Timestamp (e.g., 00:00:10)" />
+      <button @click="removeSubtitle(index)">Remove</button>
     </div>
-  </template>
-  
-  <script>
-  import axios from 'axios';
-  export default {
-    props: {
-      videoId: {
-        type: [String,null],
-        required: true
-      }
-    },
+    <button @click="addSubtitle">Add Subtitle</button>
+    <button @click="saveSubtitles" :disabled="subtitles.length === 0">Save Subtitles</button>
+    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <p v-else-if="successMessage" class="success">{{ successMessage }}</p>
+  </div>
+</template>
 
-    data() {
-      return {
-        subtitles: [],
-        errorMessage: '',
-        successMessage: ''
-      };
-    },
-    methods: {
-      addSubtitle() {
-        this.subtitles.push({ text: '', timestamp: '' });
-      },
-      removeSubtitle(index) {
-        this.subtitles.splice(index, 1);
-      },
-      saveSubtitles() {
-        if (this.subtitles.length === 0) {
-          this.errorMessage = 'No subtitles to save.';
-          return;
-        }
-        const subtitleData = {
-          videoId: this.videoId,
-          subtitles: this.subtitles          
-        };
-        console.log(subtitleData.videoId);
-        axios
-          .post('http://127.0.0.1:5000/api/subtitles', subtitleData)
-          .then(() => {
-            this.successMessage = 'Subtitles saved successfully!';
-            this.subtitles = [];
-          })
-          .catch(error => {
-            this.errorMessage = 'Error saving subtitles: ' + error.message;
-          });
-      }
+<script>
+import { inject, ref } from 'vue';
+import axios from 'axios';
+
+export default {
+  props: {
+    videoId: {
+      type: [String, null],
+      required: true
     }
-  };
-  </script>
-  
-  <style scoped>
-  .error {
-    color: red;
+  },
+  setup(props) {
+    const subtitles = ref([]);
+    const errorMessage = ref('');
+    const successMessage = ref('');
+
+    const addSubtitle = () => {
+      subtitles.value.push({ text: '', timestamp: '' });
+    };
+
+    const removeSubtitle = (index) => {
+      subtitles.value.splice(index, 1);
+    };
+
+    const saveSubtitles = () => {
+      if (subtitles.value.length === 0) {
+        errorMessage.value = 'No subtitles to save.';
+        return;
+      }
+
+      const subtitleData = {
+        videoId: props.videoId,
+        subtitles: subtitles.value
+      };
+
+      axios
+        .post('http://127.0.0.1:5000/api/subtitles', subtitleData)
+        .then(() => {
+          successMessage.value = 'Subtitles saved successfully!';
+          const eventBus = inject('$eventBus');
+          if (eventBus && eventBus.emit) {
+            eventBus.emit('subtitles-saved');
+          }
+          subtitles.value = [];
+        })
+        .catch(error => {
+          errorMessage.value = 'Error saving subtitles: ' + error.message;
+        });
+    };
+
+    return {
+      subtitles,
+      errorMessage,
+      successMessage,
+      addSubtitle,
+      removeSubtitle,
+      saveSubtitles
+    };
   }
-  
-  .success {
-    color: green;
-  }
-  </style>
-  
+};
+</script>
+
+<style scoped>
+.error {
+  color: red;
+}
+
+.success {
+  color: green;
+}
+</style>

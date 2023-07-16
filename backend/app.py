@@ -79,9 +79,10 @@ def get_subtitles(video_id):
     subtitle_file_path = os.path.join(app.config['UPLOAD_FOLDER'], subtitle_file_name)
 
     if os.path.exists(subtitle_file_path):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], subtitle_file_name, as_attachment=True)
+        return send_file(subtitle_file_path, as_attachment=True)
 
     return 'Subtitles not found', 404
+
 
 
 
@@ -102,7 +103,7 @@ def serve_video(filename):
     # Serve the video file using send_from_directory
     #return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     return send_file(full_video_path,mimetype='video/mp4')
-
+ 
 
                                
 
