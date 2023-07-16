@@ -1,9 +1,15 @@
 <template>
   <div>
     <h2>Video Player</h2>
-    <video ref="videoPlayer" :src="videoSource" autoplay controls @play="handleVideoPlay"></video>
+    <video ref="videoPlayer" :src="videoSource" autoplay="autoplay" controls="controls" @play="handleVideoPlay"></video>
     <div v-if="displayedSubtitles.length > 0">
       <p v-for="(subtitle, index) in displayedSubtitles" :key="index">
+        {{ subtitle.text }}
+      </p>
+    </div>
+    <div v-if="subtitlesLoaded && savedSubtitles.length > 0">
+      <h3>Saved Subtitles:</h3>
+      <p v-for="(subtitle, index) in savedSubtitles" :key="index">
         {{ subtitle.text }}
       </p>
     </div>
@@ -11,7 +17,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, inject } from 'vue';
 import axios from 'axios';
 
 export default {
@@ -35,11 +41,15 @@ export default {
     const videoSource = ref('');
     const subtitles = ref([]);
     const subtitlesLoaded = ref(false);
+    const savedSubtitles = ref([]);
 
     const fetchVideoSource = () => {
       const videoUrl = decodeURIComponent(props.videoUrl);
       axios
-        .get('http://127.0.0.1:5000/api/uploads/'+ videoUrl, {
+        .get('http://127.0.0.1:5000/api/uploads/' + videoUrl, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
           responseType: 'blob'
         })
         .then(response => {
@@ -55,7 +65,7 @@ export default {
     const fetchSubtitles = () => {
       const subtitlesUrl = `${props.videoId}_subtitles.txt`;
       axios
-        .get(`http://127.0.0.1:5000/api/subtitles/${subtitlesUrl}`)
+        .get('http://127.0.0.1:5000/api/subtitles/' + subtitlesUrl)
         .then(response => {
           subtitles.value = response.data.subtitles;
           subtitlesLoaded.value = true;
@@ -88,23 +98,29 @@ export default {
       fetchVideoSource();
     });
 
+    onUnmounted(() => {
+      // Clean up any event listeners or subscriptions here
+    });
     /* eslint-disable no-unused-vars */
     const handleVideoPlay = () => {
-      // Only fetch subtitles if the subtitles are not yet loaded
-      if (!subtitlesLoaded.value) {
-        fetchSubtitles();
+      const eventBus = inject('$eventBus');
+      if (eventBus && eventBus.emit) {
+        eventBus.emit('video-play');
       }
     };
     /* eslint-disable no-unused-vars */
 
-    onUnmounted(() => {
-      // Clean up any event listeners or subscriptions here
-    });
+    const eventBus = inject('$eventBus');
+    if (eventBus && eventBus.on) {
+      eventBus.on('subtitles-saved', fetchSubtitles);
+    }
 
     return {
       videoPlayer,
       videoSource,
-      displayedSubtitles
+      displayedSubtitles,
+      subtitlesLoaded,
+      savedSubtitles
     };
   }
 };
