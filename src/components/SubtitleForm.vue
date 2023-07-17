@@ -4,6 +4,9 @@
     <div v-for="(subtitle, index) in subtitles" :key="index">
       <input type="text" v-model="subtitle.text" placeholder="Subtitle text" />
       <input type="text" v-model="subtitle.timestamp" placeholder="Timestamp (e.g., 00:00:10)" />
+      <input type="text" v-model="subtitle.src" placeholder="Subtitle source URL" />
+      <input type="text" v-model="subtitle.language" placeholder="Subtitle language" />
+      <input type="text" v-model="subtitle.label" placeholder="Subtitle label" />
       <button @click="removeSubtitle(index)">Remove</button>
     </div>
     <button @click="addSubtitle">Add Subtitle</button>
@@ -30,7 +33,13 @@ export default {
     const successMessage = ref('');
 
     const addSubtitle = () => {
-      subtitles.value.push({ text: '', timestamp: '' });
+      subtitles.value.push({
+        text: '',
+        timestamp: '',
+        src: '',
+        language: '',
+        label: ''
+      });
     };
 
     const removeSubtitle = (index) => {
@@ -43,9 +52,21 @@ export default {
         return;
       }
 
+      // Format the subtitles before sending
+      const formattedSubtitles = subtitles.value.map(subtitle => {
+        return {
+          startTime: subtitle.timestamp,
+          endTime: subtitle.timestamp + 5, // Display the subtitle for 5 seconds
+          text: subtitle.text,
+          src: subtitle.src,
+          language: subtitle.language,
+          label: subtitle.label
+        };
+      });
+
       const subtitleData = {
         videoId: props.videoId,
-        subtitles: subtitles.value
+        subtitles: formattedSubtitles
       };
 
       axios
