@@ -1,12 +1,51 @@
 from flask import Flask, request, send_from_directory, jsonify
-from flask import send_file
+from flask import send_file, Response
 from flask_cors import CORS
 import os
 import uuid
 import re
 import urllib.parse
 import logging
+import mimetypes
+'''
+@app.after_request
+def after_request(response):
+    response.headers.add('Accept-Ranges', 'bytes')
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    return response
 
+def send_file_partial(path):
+    range_header = request.headers.get('Range', None)
+    if not range_header:
+        return send_file(path)
+    
+    size = os.path.getsize(path)    
+    byte1, byte2 = 0, None
+    
+    m = re.search('(\d+)-(\d*)', range_header)
+    if m:
+        g = m.groups()
+        byte1 = int(g[0])
+        if g[1]:
+            byte2 = int(g[1])
+
+    length = size - byte1
+    if byte2 is not None:
+        length = byte2 - byte1 + 1
+    
+    with open(path, 'rb') as f:
+        f.seek(byte1)
+        data = f.read(length)
+
+    mimetype = mimetypes.guess_type(path)[0]
+    rv = Response(data, 206, mimetype=mimetype, direct_passthrough=True)
+    rv.headers.add('Content-Range', f'bytes {byte1}-{byte1 + length - 1}/{size}')
+
+    return rv
+
+'''
 # Set up the logging configuration
 logging.basicConfig(level=logging.DEBUG)
 
@@ -27,7 +66,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Enable CORS for all routes
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:8080"}})
-
+#CORS(app)
 
 
 
@@ -88,21 +127,36 @@ def get_subtitles(video_id):
 
 
 
+
+
 @app.route('/api/uploads/<path:filename>', methods=['GET'])
 def serve_video(filename):
-    print('Custom message')
-    #video_filename = video_path.split('/')[-1]  # Extract the filename from the video path
-    #logging.debug(filename)
-    # Construct the full path to the video file based on the filename
+    '''
+   # Construct the full path to the video file based on the filename
     full_video_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
-    #Check if the video file exists
+    # Check if the video file exists
     if not os.path.isfile(full_video_path):
         return 'Video not found', 404
 
-    # Serve the video file using send_from_directory
-    #return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-    return send_file(full_video_path,mimetype='video/mp4')
+    # Set the appropriate Content-Type header
+    video_mimetype = 'video/mp4'
+
+    # Check if the Range header is present
+    range_header = request.headers.get('Range')
+    if range_header:
+        # If Range header is present, send the whole video file
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename, mimetype=video_mimetype)
+
+    # If Range header is not present, send the video file with appropriate headers
+    response = send_from_directory(app.config['UPLOAD_FOLDER'], filename, mimetype=video_mimetype)
+    response.headers['Accept-Ranges'] = 'bytes'
+
+    return response
+    '''
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename,
+                               conditional=True)
+
  
 
                                

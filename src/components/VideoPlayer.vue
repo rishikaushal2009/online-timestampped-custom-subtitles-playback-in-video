@@ -1,12 +1,7 @@
 <template>
   <div>
     <h2>Video Player</h2>
-    <video ref="videoPlayer" :src="videoSource" autoplay="autoplay" controls="controls" @play="handleVideoPlay"></video>
-    <div v-if="displayedSubtitles.length > 0">
-      <p v-for="(subtitle, index) in displayedSubtitles" :key="index">
-        {{ subtitle.text }}
-      </p>
-    </div>
+    <div id="player-container"></div>
     <div v-if="subtitlesLoaded && savedSubtitles.length > 0">
       <h3>Saved Subtitles:</h3>
       <p v-for="(subtitle, index) in savedSubtitles" :key="index">
@@ -17,7 +12,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed, inject } from 'vue';
+import { ref, onMounted, onUnmounted, inject, watch } from 'vue';
 import axios from 'axios';
 
 export default {
@@ -36,89 +31,70 @@ export default {
     }
   },
   setup(props) {
-    const videoPlayer = ref(null); // Create a ref to the video element
-
-    const videoSource = ref('');
-    const subtitles = ref([]);
+    const playerContainer = ref(null);
     const subtitlesLoaded = ref(false);
     const savedSubtitles = ref([]);
 
-    const fetchVideoSource = () => {
-      const videoUrl = decodeURIComponent(props.videoUrl);
-      axios
-        .get('http://127.0.0.1:5000/api/uploads/' + videoUrl, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          responseType: 'blob'
-        })
-        .then(response => {
-          const videoBlob = new Blob([response.data], { type: 'video/mp4' });
-          videoSource.value = URL.createObjectURL(videoBlob);
-        })
-        .catch(error => {
-          console.error('Error fetching video source:', error);
-          videoSource.value = ''; // Set video source to an empty string or a default value
-        });
-    };
-
     const fetchSubtitles = () => {
-      const subtitlesUrl = `${props.videoId}_subtitles.txt`;
       axios
-        .get('http://127.0.0.1:5000/api/subtitles/' + subtitlesUrl)
+        .get('http://127.0.0.1:5000/api/subtitles/' + props.subtitlesUrl)
         .then(response => {
-          subtitles.value = response.data.subtitles;
+          savedSubtitles.value = response.data.subtitles;
           subtitlesLoaded.value = true;
+          addSubtitlesToVideo(response.data.subtitles);
         })
         .catch(error => {
           console.warn('Subtitles file not found:', error);
-          subtitles.value = []; // Set subtitles to an empty array if file not found
+          savedSubtitles.value = [];
           subtitlesLoaded.value = false;
         });
     };
 
-    const isSubtitleVisible = (subtitle, currentTime) => {
-      const startTime = parseTimestamp(subtitle.startTime);
-      const endTime = parseTimestamp(subtitle.endTime);
-
-      return currentTime >= startTime && currentTime <= endTime;
+    const addSubtitlesToVideo = (subtitles) => {
+      const videoElement = playerContainer.value.querySelector('video');
+      subtitles.forEach(subtitle => {
+        const trackElement = document.createElement('track');
+        trackElement.kind = 'subtitles';
+        trackElement.src = subtitle.src;
+        trackElement.srclang = subtitle.language;
+        trackElement.label = subtitle.label;
+        videoElement.appendChild(trackElement);
+      });
     };
 
-    const parseTimestamp = timestamp => {
-      const [hours, minutes, seconds] = timestamp.split(':');
-      return (parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds)) * 1000;
-    };
-
-    const displayedSubtitles = computed(() => {
-      const currentTime = videoPlayer.value ? videoPlayer.value.currentTime * 1000 : 0;
-      return subtitles.value.filter(subtitle => isSubtitleVisible(subtitle, currentTime));
-    });
+    let videoElement = null;
 
     onMounted(() => {
-      fetchVideoSource();
+      const eventBus = inject('$eventBus');
+      if (eventBus && eventBus.on) {
+        eventBus.on('subtitles-saved', fetchSubtitles);
+      }
+
+      playerContainer.value = document.querySelector('#player-container');
+      videoElement = document.createElement('video');
+      videoElement.src = 'http://127.0.0.1:5000' + props.videoUrl;
+      videoElement.controls = true; // Enable video controls
+      playerContainer.value.appendChild(videoElement);
     });
 
     onUnmounted(() => {
-      // Clean up any event listeners or subscriptions here
-    });
-    /* eslint-disable no-unused-vars */
-    const handleVideoPlay = () => {
       const eventBus = inject('$eventBus');
-      if (eventBus && eventBus.emit) {
-        eventBus.emit('video-play');
+      if (eventBus && eventBus.off) {
+        eventBus.off('subtitles-saved', fetchSubtitles);
       }
-    };
-    /* eslint-disable no-unused-vars */
+    });
 
-    const eventBus = inject('$eventBus');
-    if (eventBus && eventBus.on) {
-      eventBus.on('subtitles-saved', fetchSubtitles);
-    }
+    watch(
+      () => props.subtitlesUrl,
+      (newSubtitlesUrl) => {
+        if (newSubtitlesUrl) {
+          fetchSubtitles();
+        }
+      }
+    );
 
     return {
-      videoPlayer,
-      videoSource,
-      displayedSubtitles,
+      playerContainer,
       subtitlesLoaded,
       savedSubtitles
     };

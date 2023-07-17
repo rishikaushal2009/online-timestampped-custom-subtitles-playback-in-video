@@ -61,7 +61,7 @@ export default {
   },
   computed: {
     videoUrl() {
-      return this.videoName ? `${this.videoName}` : '';
+      return this.videoName ? `/api/uploads/${this.videoName}` : '';
     }
   }
 };
